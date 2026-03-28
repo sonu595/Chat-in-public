@@ -1,10 +1,6 @@
 services:
   - type: web
     name: chat-api
-    runtime: java
+    runtime: docker
     plan: free
-    buildCommand: "chmod +x mvnw && ./mvnw clean package -DskipTests"
-    startCommand: "java -jar target/chat-0.0.1-SNAPSHOT.jar"
-    envVars:
-      - key: JAVA_VERSION
-        value: 17
+    dockerfilePath: ./Dockerfile
