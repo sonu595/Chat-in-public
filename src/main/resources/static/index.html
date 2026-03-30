@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat App Auth</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 12px;
+      width: 300px;
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 6px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #22c55e;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- EMAIL -->
+  <div id="emailSection">
+    <h2>Enter Email</h2>
+    <input type="email" id="email" placeholder="Enter email">
+    <button onclick="sendOtp()">Send OTP</button>
+  </div>
+
+  <!-- OTP -->
+  <div id="otpSection" class="hidden">
+    <h2>Verify OTP</h2>
+    <input type="text" id="otp" placeholder="Enter OTP">
+    <button onclick="verifyOtp()">Verify OTP</button>
+  </div>
+
+  <!-- REGISTER -->
+  <div id="registerSection" class="hidden">
+    <h2>Register</h2>
+    <input type="text" id="name" placeholder="Name">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="register()">Register</button>
+  </div>
+
+</div>
+
+<script>
+
+const BASE_URL = "http://localhost:8080/auth";
+
+// STEP 1: SEND OTP
+async function sendOtp() {
+  const email = document.getElementById("email").value;
+
+  const res = await fetch(BASE_URL + "/send-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+
+  alert("OTP Sent!");
+
+  document.getElementById("emailSection").classList.add("hidden");
+  document.getElementById("otpSection").classList.remove("hidden");
+}
+
+// STEP 2: VERIFY OTP
+async function verifyOtp() {
+  const email = document.getElementById("email").value;
+  const otp = document.getElementById("otp").value;
+
+  const res = await fetch(BASE_URL + "/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp })
+  });
+
+  alert("OTP Verified!");
+
+  document.getElementById("otpSection").classList.add("hidden");
+  document.getElementById("registerSection").classList.remove("hidden");
+}
+
+// STEP 3: REGISTER
+async function register() {
+  const email = document.getElementById("email").value;
+  const name = document.getElementById("name").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch(BASE_URL + "/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, name, password })
+  });
+
+  alert("User Registered 🎉");
+}
+
+</script>
+
+</body>
+</html>
