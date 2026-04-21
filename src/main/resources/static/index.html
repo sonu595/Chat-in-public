@@ -1,135 +1,922 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Chat App Auth</title>
-  <style>
-    body {
-      font-family: Arial;
-      background: #0f172a;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App - Complete Auth Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    .container {
-      background: #1e293b;
-      padding: 30px;
-      border-radius: 12px;
-      width: 300px;
-      text-align: center;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: none;
-      border-radius: 6px;
-    }
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
 
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #22c55e;
-      border: none;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-    }
+        .auth-card, .api-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
+        }
 
-    button:hover {
-      background: #16a34a;
-    }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    .hidden {
-      display: none;
-    }
-  </style>
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .api-header {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .content, .api-content {
+            padding: 25px;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+        }
+
+        .step-number {
+            width: 35px;
+            height: 35px;
+            background: #e2e8f0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #64748b;
+            transition: all 0.3s;
+        }
+
+        .step.active .step-number {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        .step.completed .step-number {
+            background: #22c55e;
+            color: white;
+        }
+
+        .step-label {
+            font-size: 11px;
+            margin-top: 8px;
+            color: #64748b;
+        }
+
+        .step.active .step-label {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .form-section {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #334155;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+            margin-top: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 12px;
+            width: auto;
+            margin-top: 10px;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 4px solid #22c55e;
+            display: block;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+            display: block;
+        }
+
+        .message.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+            display: block;
+        }
+
+        .token-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .token-box.show {
+            display: block;
+        }
+
+        .token-value {
+            font-family: monospace;
+            font-size: 11px;
+            word-break: break-all;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 100px;
+            overflow: auto;
+        }
+
+        .copy-btn {
+            margin-top: 10px;
+            background: #3b82f6;
+            font-size: 13px;
+            padding: 8px;
+        }
+
+        .endpoint {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .endpoint-title {
+            font-weight: bold;
+            color: #334155;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .method.post { background: #22c55e; color: white; }
+        .method.get { background: #3b82f6; color: white; }
+
+        .url {
+            font-family: monospace;
+            font-size: 12px;
+            color: #64748b;
+            margin: 10px 0;
+        }
+
+        .api-response {
+            background: #1e293b;
+            color: #a5f3fc;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow: auto;
+            display: none;
+            white-space: pre-wrap;
+        }
+
+        .api-response.show {
+            display: block;
+        }
+
+        .api-response.error {
+            background: #7f1d1d;
+            color: #fecaca;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        @media (max-width: 900px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
+<div class="main-container">
+    <!-- Auth Card -->
+    <div class="auth-card">
+        <div class="header">
+            <h1>💬 Chat App Auth</h1>
+            <p>Complete Authentication Flow</p>
+        </div>
 
-<div class="container">
+        <div class="content">
+            <div class="step-indicator">
+                <div class="step" id="step1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Send OTP</div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Verify OTP</div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Register</div>
+                </div>
+                <div class="step" id="step4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Login</div>
+                </div>
+            </div>
 
-  <!-- EMAIL -->
-  <div id="emailSection">
-    <h2>Enter Email</h2>
-    <input type="email" id="email" placeholder="Enter email">
-    <button onclick="sendOtp()">Send OTP</button>
-  </div>
+            <div class="form-section active" id="section1">
+                <div class="form-group">
+                    <label>📧 Email Address</label>
+                    <input type="email" id="email" placeholder="Enter your email">
+                </div>
+                <button onclick="sendOtp()" id="sendOtpBtn">Send OTP →</button>
+            </div>
 
-  <!-- OTP -->
-  <div id="otpSection" class="hidden">
-    <h2>Verify OTP</h2>
-    <input type="text" id="otp" placeholder="Enter OTP">
-    <button onclick="verifyOtp()">Verify OTP</button>
-  </div>
+            <div class="form-section" id="section2">
+                <div class="form-group">
+                    <label>🔐 OTP Code</label>
+                    <input type="text" id="otp" placeholder="Enter 6-digit OTP" maxlength="6">
+                </div>
+                <button onclick="verifyOtp()" id="verifyOtpBtn">Verify OTP →</button>
+                <button onclick="goToStep(1)" class="btn-secondary">← Back</button>
+            </div>
 
-  <!-- REGISTER -->
-  <div id="registerSection" class="hidden">
-    <h2>Register</h2>
-    <input type="text" id="name" placeholder="Name">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="register()">Register</button>
-  </div>
+            <div class="form-section" id="section3">
+                <div class="form-group">
+                    <label>👤 Name</label>
+                    <input type="text" id="name" placeholder="Enter your name">
+                </div>
+                <div class="form-group">
+                    <label>🔒 Password</label>
+                    <input type="password" id="password" placeholder="Password (min 6 chars)">
+                </div>
+                <button onclick="register()" id="registerBtn">Register →</button>
+                <button onclick="goToStep(2)" class="btn-secondary">← Back</button>
+            </div>
 
+            <div class="form-section" id="section4">
+                <div class="form-group">
+                    <label>📧 Email</label>
+                    <input type="email" id="loginEmail" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label>🔒 Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter password">
+                </div>
+                <button onclick="login()" id="loginBtn">Login →</button>
+            </div>
+
+            <div id="message" class="message"></div>
+            <div id="tokenBox" class="token-box">
+                <div class="token-label">🎫 JWT Token</div>
+                <div class="token-value" id="tokenValue"></div>
+                <button class="copy-btn" onclick="copyToken()">📋 Copy Token</button>
+            </div>
+
+            <div class="login-link">
+                <a onclick="goToStep(4)">🔑 Already have an account? Login</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Tester Card -->
+    <div class="api-card">
+        <div class="api-header">
+            <h1>🛠️ API Tester</h1>
+            <p>Test endpoints with detailed error messages</p>
+        </div>
+
+        <div class="api-content">
+            <div class="endpoint">
+                <div class="endpoint-title">
+                    <span class="method post">POST</span>
+                    <span>Send OTP</span>
+                </div>
+                <div class="url">/auth/send-otp</div>
+                <input type="text" id="apiEmail" placeholder="Email" style="margin-bottom: 10px;">
+                <button onclick="testSendOtp()" class="btn-small">Test Send OTP</button>
+                <div id="sendOtpResponse" class="api-response"></div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-title">
+                    <span class="method post">POST</span>
+                    <span>Verify OTP</span>
+                </div>
+                <div class="url">/auth/verify-otp</div>
+                <input type="text" id="verifyEmail" placeholder="Email" style="margin-bottom: 10px;">
+                <input type="text" id="verifyOtp" placeholder="OTP" style="margin-bottom: 10px;">
+                <button onclick="testVerifyOtp()" class="btn-small">Test Verify OTP</button>
+                <div id="verifyOtpResponse" class="api-response"></div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-title">
+                    <span class="method post">POST</span>
+                    <span>Register</span>
+                </div>
+                <div class="url">/auth/register</div>
+                <input type="text" id="regName" placeholder="Name" style="margin-bottom: 10px;">
+                <input type="text" id="regEmail" placeholder="Email" style="margin-bottom: 10px;">
+                <input type="password" id="regPassword" placeholder="Password" style="margin-bottom: 10px;">
+                <button onclick="testRegister()" class="btn-small">Test Register</button>
+                <div id="registerResponse" class="api-response"></div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-title">
+                    <span class="method post">POST</span>
+                    <span>Login</span>
+                </div>
+                <div class="url">/auth/login</div>
+                <input type="text" id="loginApiEmail" placeholder="Email" style="margin-bottom: 10px;">
+                <input type="password" id="loginApiPassword" placeholder="Password" style="margin-bottom: 10px;">
+                <button onclick="testLogin()" class="btn-small">Test Login</button>
+                <div id="loginResponse" class="api-response"></div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-title">
+                    <span class="method get">GET</span>
+                    <span>Protected API (with Token)</span>
+                </div>
+                <div class="url">/api/hello?name=Test</div>
+                <input type="text" id="bearerToken" placeholder="JWT Token" style="margin-bottom: 10px;">
+                <button onclick="testProtectedApi()" class="btn-small">Test Protected API</button>
+                <div id="protectedResponse" class="api-response"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
+    const BASE_URL = "http://localhost:8080";
+    let currentStep = 1;
+    let userEmail = "";
 
-const BASE_URL = "http://localhost:8080/auth";
+    function showMessage(text, type) {
+        const msgDiv = document.getElementById('message');
+        msgDiv.textContent = text;
+        msgDiv.className = `message ${type}`;
+        setTimeout(() => {
+            if(msgDiv.className === `message ${type}`) {
+                msgDiv.className = 'message';
+            }
+        }, 5000);
+    }
 
-// STEP 1: SEND OTP
-async function sendOtp() {
-  const email = document.getElementById("email").value;
+    function showApiResponse(elementId, data, isError = false) {
+        const responseDiv = document.getElementById(elementId);
+        let responseText = '';
+        
+        if(typeof data === 'object') {
+            responseText = JSON.stringify(data, null, 2);
+        } else {
+            responseText = String(data);
+        }
+        
+        responseDiv.textContent = responseText;
+        responseDiv.className = `api-response show`;
+        if(isError) {
+            responseDiv.classList.add('error');
+        } else {
+            responseDiv.classList.remove('error');
+        }
+    }
 
-  const res = await fetch(BASE_URL + "/send-otp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email })
-  });
+    function showToken(token) {
+        const tokenBox = document.getElementById('tokenBox');
+        const tokenValue = document.getElementById('tokenValue');
+        tokenValue.textContent = token;
+        tokenBox.classList.add('show');
+    }
 
-  alert("OTP Sent!");
+    function copyToken() {
+        const token = document.getElementById('tokenValue').textContent;
+        navigator.clipboard.writeText(token);
+        showMessage('✅ Token copied!', 'success');
+    }
 
-  document.getElementById("emailSection").classList.add("hidden");
-  document.getElementById("otpSection").classList.remove("hidden");
-}
+    function goToStep(step) {
+        for(let i = 1; i <= 4; i++) {
+            document.getElementById(`section${i}`).classList.remove('active');
+            document.getElementById(`step${i}`).classList.remove('active');
+            document.getElementById(`step${i}`).classList.remove('completed');
+        }
+        
+        document.getElementById(`section${step}`).classList.add('active');
+        document.getElementById(`step${step}`).classList.add('active');
+        
+        for(let i = 1; i < step; i++) {
+            document.getElementById(`step${i}`).classList.add('completed');
+        }
+        
+        currentStep = step;
+        document.getElementById('message').className = 'message';
+        if(step !== 4) {
+            document.getElementById('tokenBox').classList.remove('show');
+        }
+    }
 
-// STEP 2: VERIFY OTP
-async function verifyOtp() {
-  const email = document.getElementById("email").value;
-  const otp = document.getElementById("otp").value;
+    // ============ AUTH FLOW FUNCTIONS ============
+    async function sendOtp() {
+        const email = document.getElementById('email').value;
+        
+        if(!email || !email.includes('@')) {
+            showMessage('❌ Valid email required', 'error');
+            return;
+        }
+        
+        userEmail = email;
+        const btn = document.getElementById('sendOtpBtn');
+        btn.disabled = true;
+        btn.innerHTML = 'Sending... <span class="loading"></span>';
+        
+        try {
+            const res = await fetch(`${BASE_URL}/auth/send-otp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email })
+            });
+            
+            const data = await res.json();
+            
+            if(res.ok) {
+                showMessage(`✅ ${data.message || 'OTP sent! Check your email.'}`, 'success');
+                goToStep(2);
+                document.getElementById('otp').focus();
+            } else {
+                const errorMsg = data.error || data.message || JSON.stringify(data);
+                showMessage(`❌ ${errorMsg}`, 'error');
+            }
+        } catch(error) {
+            showMessage(`❌ Network error: ${error.message}. Make sure server is running on port 8080`, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Send OTP →';
+        }
+    }
 
-  const res = await fetch(BASE_URL + "/verify-otp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, otp })
-  });
+    async function verifyOtp() {
+        const otp = document.getElementById('otp').value;
+        const email = userEmail;
+        
+        if(!otp || otp.length !== 6) {
+            showMessage('❌ Valid 6-digit OTP required', 'error');
+            return;
+        }
+        
+        const btn = document.getElementById('verifyOtpBtn');
+        btn.disabled = true;
+        btn.innerHTML = 'Verifying... <span class="loading"></span>';
+        
+        try {
+            const res = await fetch(`${BASE_URL}/auth/verify-otp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, otp })
+            });
+            
+            const data = await res.json();
+            
+            if(res.ok) {
+                showMessage(`✅ ${data.message || 'OTP verified!'}`, 'success');
+                goToStep(3);
+                document.getElementById('name').focus();
+            } else {
+                const errorMsg = data.error || data.message || JSON.stringify(data);
+                showMessage(`❌ ${errorMsg}`, 'error');
+            }
+        } catch(error) {
+            showMessage(`❌ Network error: ${error.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Verify OTP →';
+        }
+    }
 
-  alert("OTP Verified!");
+    async function register() {
+        const name = document.getElementById('name').value;
+        const password = document.getElementById('password').value;
+        const email = userEmail;
+        
+        if(!name) {
+            showMessage('❌ Name required', 'error');
+            return;
+        }
+        if(!password || password.length < 6) {
+            showMessage('❌ Password must be at least 6 characters', 'error');
+            return;
+        }
+        
+        const btn = document.getElementById('registerBtn');
+        btn.disabled = true;
+        btn.innerHTML = 'Registering... <span class="loading"></span>';
+        
+        try {
+            const res = await fetch(`${BASE_URL}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, name, password })
+            });
+            
+            const data = await res.json();
+            
+            if(res.ok) {
+                showMessage(`✅ ${data.message || 'Registration successful! Please login.'}`, 'success');
+                goToStep(4);
+                document.getElementById('loginEmail').value = email;
+                document.getElementById('loginPassword').focus();
+            } else {
+                const errorMsg = data.error || data.message || JSON.stringify(data);
+                showMessage(`❌ ${errorMsg}`, 'error');
+            }
+        } catch(error) {
+            showMessage(`❌ Network error: ${error.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Register →';
+        }
+    }
 
-  document.getElementById("otpSection").classList.add("hidden");
-  document.getElementById("registerSection").classList.remove("hidden");
-}
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        
+        if(!email || !password) {
+            showMessage('❌ Email and password required', 'error');
+            return;
+        }
+        
+        const btn = document.getElementById('loginBtn');
+        btn.disabled = true;
+        btn.innerHTML = 'Logging in... <span class="loading"></span>';
+        
+        try {
+            const res = await fetch(`${BASE_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await res.json();
+            
+            if(res.ok) {
+                showMessage(`✅ Login successful!`, 'success');
+                showToken(data.token);
+                localStorage.setItem('jwt_token', data.token);
+                document.getElementById('bearerToken').value = data.token;
+            } else {
+                const errorMsg = data.error || data.message || JSON.stringify(data);
+                showMessage(`❌ ${errorMsg}`, 'error');
+            }
+        } catch(error) {
+            showMessage(`❌ Network error: ${error.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Login →';
+        }
+    }
 
-// STEP 3: REGISTER
-async function register() {
-  const email = document.getElementById("email").value;
-  const name = document.getElementById("name").value;
-  const password = document.getElementById("password").value;
+    // ============ API TESTER FUNCTIONS with DETAILED ERRORS ============
+    async function testSendOtp() {
+        const email = document.getElementById('apiEmail').value;
+        if(!email) {
+            showApiResponse('sendOtpResponse', { error: 'Email is required' }, true);
+            return;
+        }
+        
+        try {
+            const res = await fetch(`${BASE_URL}/auth/send-otp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                showApiResponse('sendOtpResponse', data, false);
+            } else {
+                showApiResponse('sendOtpResponse', { 
+                    status: res.status,
+                    error: data.error || data.message || 'Request failed',
+                    fullResponse: data
+                }, true);
+            }
+        } catch(error) {
+            showApiResponse('sendOtpResponse', { 
+                error: 'Network Error',
+                message: error.message,
+                tip: 'Make sure Spring Boot is running on port 8080'
+            }, true);
+        }
+    }
 
-  const res = await fetch(BASE_URL + "/register", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, name, password })
-  });
+    async function testVerifyOtp() {
+        const email = document.getElementById('verifyEmail').value;
+        const otp = document.getElementById('verifyOtp').value;
+        
+        if(!email) {
+            showApiResponse('verifyOtpResponse', { error: 'Email is required' }, true);
+            return;
+        }
+        if(!otp) {
+            showApiResponse('verifyOtpResponse', { error: 'OTP is required' }, true);
+            return;
+        }
+        
+        try {
+            const res = await fetch(`${BASE_URL}/auth/verify-otp`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, otp })
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                showApiResponse('verifyOtpResponse', data, false);
+            } else {
+                showApiResponse('verifyOtpResponse', { 
+                    status: res.status,
+                    error: data.error || data.message || 'Verification failed',
+                    fullResponse: data
+                }, true);
+            }
+        } catch(error) {
+            showApiResponse('verifyOtpResponse', { 
+                error: 'Network Error',
+                message: error.message
+            }, true);
+        }
+    }
 
-  alert("User Registered 🎉");
-}
+    async function testRegister() {
+        const name = document.getElementById('regName').value;
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+        
+        const errors = [];
+        if(!name) errors.push('Name required');
+        if(!email) errors.push('Email required');
+        if(!password) errors.push('Password required');
+        if(password && password.length < 6) errors.push('Password must be 6+ characters');
+        
+        if(errors.length > 0) {
+            showApiResponse('registerResponse', { errors: errors }, true);
+            return;
+        }
+        
+        try {
+            const res = await fetch(`${BASE_URL}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, password })
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                showApiResponse('registerResponse', data, false);
+            } else {
+                showApiResponse('registerResponse', { 
+                    status: res.status,
+                    error: data.error || data.message || 'Registration failed',
+                    fullResponse: data
+                }, true);
+            }
+        } catch(error) {
+            showApiResponse('registerResponse', { 
+                error: 'Network Error',
+                message: error.message
+            }, true);
+        }
+    }
 
+    async function testLogin() {
+        const email = document.getElementById('loginApiEmail').value;
+        const password = document.getElementById('loginApiPassword').value;
+        
+        if(!email) {
+            showApiResponse('loginResponse', { error: 'Email is required' }, true);
+            return;
+        }
+        if(!password) {
+            showApiResponse('loginResponse', { error: 'Password is required' }, true);
+            return;
+        }
+        
+        try {
+            const res = await fetch(`${BASE_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                showApiResponse('loginResponse', data, false);
+                if(data.token) {
+                    document.getElementById('bearerToken').value = data.token;
+                }
+            } else {
+                showApiResponse('loginResponse', { 
+                    status: res.status,
+                    error: data.error || data.message || 'Login failed',
+                    fullResponse: data
+                }, true);
+            }
+        } catch(error) {
+            showApiResponse('loginResponse', { 
+                error: 'Network Error',
+                message: error.message
+            }, true);
+        }
+    }
+
+    async function testProtectedApi() {
+        const token = document.getElementById('bearerToken').value;
+        
+        if(!token) {
+            showApiResponse('protectedResponse', { 
+                error: 'No token provided',
+                tip: 'Please login first to get a JWT token'
+            }, true);
+            return;
+        }
+        
+        try {
+            const res = await fetch(`${BASE_URL}/api/hello?name=Test`, {
+                method: "GET",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                showApiResponse('protectedResponse', data, false);
+            } else {
+                showApiResponse('protectedResponse', { 
+                    status: res.status,
+                    error: data.error || data.message || 'Access denied',
+                    fullResponse: data,
+                    tip: 'Make sure token is valid and not expired'
+                }, true);
+            }
+        } catch(error) {
+            showApiResponse('protectedResponse', { 
+                error: 'Network Error',
+                message: error.message
+            }, true);
+        }
+    }
+
+    // Enter key support
+    document.getElementById('email')?.addEventListener('keypress', e => e.key === 'Enter' && sendOtp());
+    document.getElementById('otp')?.addEventListener('keypress', e => e.key === 'Enter' && verifyOtp());
+    document.getElementById('name')?.addEventListener('keypress', e => e.key === 'Enter' && register());
+    document.getElementById('password')?.addEventListener('keypress', e => e.key === 'Enter' && register());
+    document.getElementById('loginEmail')?.addEventListener('keypress', e => e.key === 'Enter' && login());
+    document.getElementById('loginPassword')?.addEventListener('keypress', e => e.key === 'Enter' && login());
 </script>
-
 </body>
 </html>

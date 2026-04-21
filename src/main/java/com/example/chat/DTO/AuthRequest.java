@@ -3,7 +3,7 @@ package com.example.chat.DTO;
 import lombok.Data;
 
 @Data
-public abstract class AuthRequest {
+public class AuthRequest {
     private String email;
-    private String paassword;
+    private String password;
 }

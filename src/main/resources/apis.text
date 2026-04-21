@@ -1,0 +1,7 @@
+   urls                           ||  requirements
+
+
+http://localhost:8080/send-otp    -- email
+http://localhost:8080/verify-otp  -- email + otp
+http://localhost:8080/register    -- email + name + password
+http://localhost:8080/login       -- email + password
