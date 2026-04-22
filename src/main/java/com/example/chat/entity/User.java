@@ -33,6 +33,13 @@ public class User {
     @Column(nullable = false)
     private boolean Verified = false;
 
+    private String bio;
+    
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+    private boolean isActive = true;
+    private LocalDateTime lastloginAt;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

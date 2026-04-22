@@ -42,10 +42,14 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/auth/**",      // All auth endpoints
+                    "/profile/forgot-password",
+                    "/profile/reset-password",
                     "/",             // Home
                     "/api/hello",    // Public hello endpoint
                     "/error"         // Error endpoint
                 ).permitAll()
+                .requestMatchers("/profile/**")
+                .authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
