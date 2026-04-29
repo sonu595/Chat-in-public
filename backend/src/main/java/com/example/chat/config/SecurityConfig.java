@@ -41,12 +41,17 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/auth/**",      // All auth endpoints
+                    "/login",
+                    "/register",
+                    "/auth/**",      
                     "/profile/forgot-password",
                     "/profile/reset-password",
-                    "/",             // Home
-                    "/api/hello",    // Public hello endpoint
-                    "/error"         // Error endpoint
+                    "/ws/**",
+                    "/topic/**",
+                    "/app/**",
+                    "/",             
+                    "/api/hello",    
+                    "/error"         
                 ).permitAll()
                 .requestMatchers("/profile/**")
                 .authenticated()

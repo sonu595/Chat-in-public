@@ -19,6 +19,7 @@ import com.example.chat.repository.PasswordResetTokenRepository;
 import com.example.chat.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
+import java.util.List;
 
 @Service
 public class UserProfileService {
@@ -42,6 +43,10 @@ public class UserProfileService {
         .orElseThrow(() -> new BusinessException("User not found"));
     }
 
+    public String getCurrentUserEmail() {
+        return GetCurrentUser().getEmail();
+    }
+
     // get profile
     public UserProfileResponse getMyProfile() {
         User user = GetCurrentUser();
@@ -59,7 +64,7 @@ public class UserProfileService {
         if (request.getBio() != null) {
             user.setBio(request.getBio());
         }
-        if (user.getAvatarUrl() != null) {
+        if (request.getAvatarUrl() != null) {
             user.setAvatarUrl(request.getAvatarUrl());
         }
         userRepository.save(user);
@@ -144,6 +149,15 @@ public class UserProfileService {
         User user = userRepository.findById(id)
         .orElseThrow(() -> new BusinessException("user not found"));
         return convertToResponse(user);
+    }
+
+    public List<UserProfileResponse> getAllUsers() {
+        String currentUserEmail = getCurrentUserEmail();
+        return userRepository.findAll().stream()
+            .filter(User::isVerified)
+            .filter(user -> !user.getEmail().equalsIgnoreCase(currentUserEmail))
+            .map(this::convertToResponse)
+            .toList();
     }
 
     // convert to response Dto method 

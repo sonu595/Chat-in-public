@@ -1,6 +1,7 @@
 package com.example.chat.controller;
 
 import java.util.Map;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -61,5 +62,10 @@ public class UserProfileController {
     @GetMapping("/{userId}")
     public ResponseEntity<UserProfileResponse> getUserById(@PathVariable Long userId) {
         return ResponseEntity.ok(userProfileService.getUserById(userId));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<UserProfileResponse>> getAllUsers() {
+        return ResponseEntity.ok(userProfileService.getAllUsers());
     }
 }
