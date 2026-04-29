@@ -1,0 +1,78 @@
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:8080';
+const TOKEN_KEY = 'token';
+
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_KEY);
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+export const authApi = {
+  login: async (payload) => {
+    const { data } = await api.post('/auth/login', payload);
+    return data;
+  },
+  sendOtp: async (email) => {
+    const { data } = await api.post('/auth/send-otp', { email });
+    return data;
+  },
+  verifyOtp: async (email, otp) => {
+    const { data } = await api.post('/auth/verify-otp', { email, otp });
+    return data;
+  },
+  register: async (payload) => {
+    const { data } = await api.post('/auth/register', payload);
+    return data;
+  },
+};
+
+export const profileApi = {
+  getMe: async () => {
+    const { data } = await api.get('/profile/me');
+    return data;
+  },
+  update: async (payload) => {
+    const { data } = await api.put('/profile/update', payload);
+    return data;
+  },
+  changePassword: async (payload) => {
+    const { data } = await api.post('/profile/change-password', payload);
+    return data;
+  },
+  listUsers: async () => {
+    const { data } = await api.get('/profile/users');
+    return data;
+  },
+};
+
+export const chatApi = {
+  getConversation: async (otherEmail) => {
+    const { data } = await api.get(`/api/chat/conversation/${encodeURIComponent(otherEmail)}`);
+    return data;
+  },
+  sendMessage: async (payload) => {
+    const { data } = await api.post('/api/chat/messages', payload);
+    return data;
+  },
+};
+
+export const session = {
+  getToken: () => localStorage.getItem(TOKEN_KEY),
+  setToken: (token) => {
+    localStorage.setItem(TOKEN_KEY, token);
+  },
+  clear: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('user');
+  },
+};
