@@ -54,8 +54,12 @@ public class UserProfileController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<Map<String, String>> resetPassword(@RequestParam String token, @RequestParam String newPassword){
-        String message = userProfileService.resetPassword(token, newPassword);
+    public ResponseEntity<Map<String, String>> resetPassword(
+        @RequestParam String email,
+        @RequestParam String otp,
+        @RequestParam String newPassword
+    ){
+        String message = userProfileService.resetPassword(email, otp, newPassword);
         return ResponseEntity.ok(Map.of("message",message));
     }
     

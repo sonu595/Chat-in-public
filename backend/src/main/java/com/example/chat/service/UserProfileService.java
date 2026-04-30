@@ -1,9 +1,11 @@
 package com.example.chat.service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.time.Duration;
+import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,10 +14,8 @@ import org.springframework.stereotype.Service;
 import com.example.chat.DTO.PasswordChangeRequest;
 import com.example.chat.DTO.UserProfileResponse;
 import com.example.chat.DTO.UserProfileUpdateRequest;
-import com.example.chat.entity.PasswordResetToken;
 import com.example.chat.entity.User;
 import com.example.chat.exception.BusinessException;
-import com.example.chat.repository.PasswordResetTokenRepository;
 import com.example.chat.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
@@ -23,17 +23,22 @@ import java.util.List;
 
 @Service
 public class UserProfileService {
+    private static final String RESET_OTP_PREFIX = "reset-otp:";
+    private static final String RESET_RATE_LIMIT_PREFIX = "reset-ratelimit:";
+    private static final int RESET_OTP_EXPIRY_MINUTES = 10;
+    private static final int RESET_RATE_LIMIT_SECONDS = 60;
+
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EmailService emailService;
-
-    @Autowired
-    private PasswordResetTokenRepository tokenRepository;
 
     // get current loggin user
     private User GetCurrentUser() {
@@ -89,44 +94,48 @@ public class UserProfileService {
 
     // forget password 
     public String forgotPassword(String email) {
-        User user = userRepository.findByEmail(email)
-        .orElseThrow(() -> new  BusinessException("User not found with this email"));
+        userRepository.findByEmail(email)
+            .orElseThrow(() -> new BusinessException("User not found with this email"));
 
-        String token = UUID.randomUUID().toString();
-        PasswordResetToken resetToken = new PasswordResetToken();
-        resetToken.setToken(token);
-        resetToken.setEmail(email);
-        resetToken.setExpiryDate(LocalDateTime.now().plusHours(1));
-        resetToken.setUsed(false);
-        tokenRepository.save(resetToken);
+        String rateLimitKey = RESET_RATE_LIMIT_PREFIX + email;
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(rateLimitKey))) {
+            throw new BusinessException("Please wait 60 seconds before requesting another OTP");
+        }
 
-        String resetLink = "http://localhost:8080/auth/reset-password?token=" + token;
+        String otp = String.format("%06d", new Random().nextInt(999999));
+        redisTemplate.opsForValue().set(
+            RESET_OTP_PREFIX + email,
+            otp,
+            Duration.ofMinutes(RESET_OTP_EXPIRY_MINUTES)
+        );
+        redisTemplate.opsForValue().set(
+            rateLimitKey,
+            "1",
+            Duration.ofSeconds(RESET_RATE_LIMIT_SECONDS)
+        );
 
-        emailService.sendPasswordResetEmail(email, resetLink);
+        emailService.sendPasswordResetOtp(email, otp);
 
-        return "Password reset link sent to your email";
+        return "Password reset OTP sent to your email";
     }
 
     // reset password
     @Transactional
-    public String resetPassword(String token, String newpassword){
-        PasswordResetToken resetToken = tokenRepository.findByToken(token)
-        .orElseThrow(()-> new BusinessException("Invalid or expired token"));
-        if (resetToken.isUsed()) {
-            throw new BusinessException("token has alredy been used");
+    public String resetPassword(String email, String otp, String newpassword){
+        String savedOtp = redisTemplate.opsForValue().get(RESET_OTP_PREFIX + email);
+        if (savedOtp == null) {
+            throw new BusinessException("OTP expired or not found. Please request a new OTP.");
         }
 
-        if (resetToken.isExpired()) {
-            throw new BusinessException("Token has expired");
+        if (!savedOtp.equals(otp)) {
+            throw new BusinessException("Invalid OTP");
         }
 
-        User user = userRepository.findByEmail(resetToken.getEmail())
-        .orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new BusinessException("User not found"));
         user.setPassword(passwordEncoder.encode(newpassword));
         userRepository.save(user);
-
-        resetToken.setUsed(true);
-        tokenRepository.save(resetToken);
+        redisTemplate.delete(RESET_OTP_PREFIX + email);
 
         return "Password reset successfully";
     }

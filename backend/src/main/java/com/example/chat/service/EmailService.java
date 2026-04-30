@@ -26,4 +26,12 @@ public class EmailService {
         msg.setText("Click the link below to reset your password:\n\n" + resetLink + "\n\nThis link will expire in 1 hour.");
         mailSender.send(msg);        
     }
+
+    public void sendPasswordResetOtp(String email, String otp) {
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setTo(email);
+        msg.setSubject("Reset Password OTP");
+        msg.setText("Your password reset OTP is: " + otp + "\n\nValid for 10 minutes.");
+        mailSender.send(msg);
+    }
 }
