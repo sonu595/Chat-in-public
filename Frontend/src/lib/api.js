@@ -53,6 +53,14 @@ export const profileApi = {
     const { data } = await api.get('/profile/users');
     return data;
   },
+  forgotPassword: async (email) => {
+      const { data } = await api.post(`/profile/forgot-password?email=${encodeURIComponent(email)}`);
+    return data;
+  },
+  resetPassword: async (token, newPassword) => {
+    const { data } = await api.post(`/profile/reset-password?token=${encodeURIComponent(token)}&newPassword=${encodeURIComponent(newPassword)}`);
+    return data;
+  },
 };
 
 export const chatApi = {

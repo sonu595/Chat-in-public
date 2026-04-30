@@ -1,40 +1,198 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import VerifyOtp from './pages/VerifyOtp';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import ChangePassword from './components/ChangePassword';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import { profileApi, session } from './lib/api';
+import {
+  getCurrentPath,
+  navigateToPath,
+  PENDING_SIGNUP_KEY,
+  PUBLIC_ROUTES,
+  ROUTES,
+} from './routes/appRoutes';
+
+const UI_THEME_KEY = 'uiTheme';
+
+const THEME_OPTIONS = {
+  sand: {
+    key: 'sand',
+    label: 'Warm Sand',
+    pageBackground: '#f5f3ef',
+    surface: '#ffffff',
+    subtle: '#faf7f2',
+    border: '#e8e0d6',
+    accent: '#111111',
+    accentText: '#ffffff',
+    muted: '#8d8479',
+    text: '#111111',
+    shadow: 'rgba(24, 18, 12, 0.08)',
+  },
+  ocean: {
+    key: 'ocean',
+    label: 'Ocean Blue',
+    pageBackground: '#eef4ff',
+    surface: '#ffffff',
+    subtle: '#f5f8ff',
+    border: '#d8e3fb',
+    accent: '#3157d5',
+    accentText: '#ffffff',
+    muted: '#6f7da8',
+    text: '#17213f',
+    shadow: 'rgba(49, 87, 213, 0.12)',
+  },
+  forest: {
+    key: 'forest',
+    label: 'Forest Green',
+    pageBackground: '#eef6f0',
+    surface: '#ffffff',
+    subtle: '#f5fbf6',
+    border: '#d7e7d9',
+    accent: '#2d7a4e',
+    accentText: '#ffffff',
+    muted: '#6d8673',
+    text: '#173222',
+    shadow: 'rgba(45, 122, 78, 0.12)',
+  },
+};
 
 const App = () => {
-  const [screen, setScreen] = useState('loading');
-  const [pendingSignup, setPendingSignup] = useState(null);
+  const [pathname, setPathname] = useState(getCurrentPath);
+  const [isLoading, setIsLoading] = useState(() => Boolean(session.getToken()));
+  const [pendingSignup, setPendingSignup] = useState(() => {
+    try {
+      const storedSignup = sessionStorage.getItem(PENDING_SIGNUP_KEY);
+      return storedSignup ? JSON.parse(storedSignup) : null;
+    } catch (error) {
+      console.error(error);
+      sessionStorage.removeItem(PENDING_SIGNUP_KEY);
+      return null;
+    }
+  });
   const [currentUser, setCurrentUser] = useState(null);
   const [authNotice, setAuthNotice] = useState('');
+  const [themeKey, setThemeKey] = useState(() => localStorage.getItem(UI_THEME_KEY) || 'sand');
+  const currentTheme = THEME_OPTIONS[themeKey] || THEME_OPTIONS.sand;
 
-  const hydrateSession = async () => {
+  // Ye helper React state ko browser URL ke saath sync karta hai.
+  const navigateTo = useCallback((path, { replace = false } = {}) => {
+    navigateToPath(path, { replace });
+    setPathname(path);
+  }, []);
+
+  const hydrateSession = useCallback(async () => {
     try {
       const user = await profileApi.getMe();
       localStorage.setItem('user', JSON.stringify(user));
       setCurrentUser(user);
-      setScreen('app');
+      setAuthNotice('');
+      navigateTo(ROUTES.dashboard, { replace: true });
     } catch (error) {
       console.error(error);
       session.clear();
       setCurrentUser(null);
-      setScreen('login');
-      setAuthNotice('Login karke apni chats access karo.');
+      setAuthNotice('login first');
+      navigateTo(ROUTES.login, { replace: true });
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [navigateTo]);
 
   useEffect(() => {
-    if (session.getToken()) {
-      hydrateSession();
+    const handlePopState = () => {
+      setPathname(getCurrentPath());
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pendingSignup) {
+      sessionStorage.setItem(PENDING_SIGNUP_KEY, JSON.stringify(pendingSignup));
       return;
     }
 
-    setScreen('login');
-  }, []);
+    sessionStorage.removeItem(PENDING_SIGNUP_KEY);
+  }, [pendingSignup]);
+
+  useEffect(() => {
+    localStorage.setItem(UI_THEME_KEY, themeKey);
+  }, [themeKey]);
+
+  useEffect(() => {
+    if (!session.getToken()) {
+      setIsLoading(false);
+      return undefined;
+    }
+
+    let isCancelled = false;
+
+    const syncSession = async () => {
+      if (!isCancelled) {
+        await hydrateSession();
+      }
+    };
+
+    void syncSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [hydrateSession]);
+
+  useEffect(() => {
+    if (isLoading) {
+      return undefined;
+    }
+
+    let nextPath = null;
+    let nextNotice = '';
+
+    if (currentUser) {
+      // Agar user logged in hai aur public route pe hai to dashboard pe bhejo
+      if (PUBLIC_ROUTES.has(pathname) || pathname === ROUTES.dashboard) {
+        nextPath = ROUTES.dashboard;
+      }
+    } else if (pathname === '/' || pathname === ROUTES.dashboard) {
+      if (pathname === ROUTES.dashboard) {
+        nextNotice = 'login first';
+      }
+      nextPath = ROUTES.login;
+    } else if (!PUBLIC_ROUTES.has(pathname)) {
+      nextPath = ROUTES.login;
+    } else if (pathname === ROUTES.otp && !pendingSignup) {
+      nextNotice = 'signup first to verify otp';
+      nextPath = ROUTES.signup;
+    }
+
+    if (!nextPath && !nextNotice) {
+      return undefined;
+    }
+
+    const redirectTimer = window.setTimeout(() => {
+      if (nextNotice) {
+        setAuthNotice(nextNotice);
+      }
+
+      if (nextPath) {
+        navigateTo(nextPath, { replace: true });
+      }
+    }, 0);
+
+    return () => {
+      window.clearTimeout(redirectTimer);
+    };
+  }, [currentUser, isLoading, navigateTo, pathname, pendingSignup]);
 
   const handleLoginSuccess = async (token) => {
     session.setToken(token);
@@ -45,34 +203,39 @@ const App = () => {
     session.clear();
     setCurrentUser(null);
     setPendingSignup(null);
-    setScreen('login');
-    setAuthNotice('Session logout ho gaya.');
+    setAuthNotice('you are logged out');
+    navigateTo(ROUTES.login, { replace: true });
   };
 
   const handleRegistrationSuccess = () => {
     setPendingSignup(null);
-    setScreen('login');
-    setAuthNotice('Account ready hai. Ab login karo.');
+    setAuthNotice('Account created! Please login to your account');
+    navigateTo(ROUTES.login, { replace: true });
   };
 
-  if (screen === 'loading') {
+  if (isLoading) {
     return (
       <div className="loading-screen">
         <div className="loading-card">
           <p className="eyebrow">Chat Application</p>
           <h1>Preparing your workspace</h1>
-          <p>Session check ho raha hai...</p>
+          <p>checking session ...........</p>
         </div>
       </div>
     );
   }
 
-  if (screen === 'login') {
+  // Public Routes
+  if (pathname === ROUTES.login) {
     return (
       <Login
         onNavigateToSignup={() => {
           setAuthNotice('');
-          setScreen('signup');
+          navigateTo(ROUTES.signup);
+        }}
+        onNavigateToForgotPassword={() => {
+          setAuthNotice('');
+          navigateTo(ROUTES.forgotPassword);
         }}
         onLoginSuccess={handleLoginSuccess}
         notice={authNotice}
@@ -80,37 +243,100 @@ const App = () => {
     );
   }
 
-  if (screen === 'signup') {
+  if (pathname === ROUTES.signup) {
     return (
       <Signup
         onNavigateToLogin={() => {
-          setScreen('login');
           setAuthNotice('');
+          navigateTo(ROUTES.login);
+        }}
+        onNavigateToForgotPassword={() => {
+          setAuthNotice('');
+          navigateTo(ROUTES.forgotPassword);
         }}
         onNavigateToOtp={(signupData) => {
           setPendingSignup(signupData);
-          setScreen('otp');
+          navigateTo(ROUTES.otp);
         }}
       />
     );
   }
 
-  if (screen === 'otp') {
+  if (pathname === ROUTES.otp) {
     return (
       <VerifyOtp
         signupData={pendingSignup}
-        onNavigateToLogin={() => setScreen('login')}
+        onNavigateToLogin={() => navigateTo(ROUTES.login)}
         onRegistrationSuccess={handleRegistrationSuccess}
       />
     );
   }
 
-  if (screen === 'app' && currentUser) {
+  if (pathname === ROUTES.forgotPassword) {
+    return (
+      <ForgotPassword
+        onNavigateToLogin={() => navigateTo(ROUTES.login)}
+      />
+    );
+  }
+
+  if (pathname === ROUTES.resetPassword) {
+    return (
+      <ResetPassword
+        onNavigateToLogin={() => navigateTo(ROUTES.login)}
+      />
+    );
+  }
+
+  // Protected Routes (require authentication)
+  if (pathname === ROUTES.dashboard && currentUser) {
     return (
       <Dashboard
+        theme={currentTheme}
         user={currentUser}
         onUserUpdated={setCurrentUser}
         onLogout={handleLogout}
+        onNavigateToProfile={() => navigateTo(ROUTES.profile)}
+        onNavigateToSettings={() => navigateTo(ROUTES.settings)}
+      />
+    );
+  }
+
+  if (pathname === ROUTES.profile && currentUser) {
+    return (
+      <Profile
+        theme={currentTheme}
+        user={currentUser}
+        onUserUpdated={setCurrentUser}
+        onNavigateToDashboard={() => navigateTo(ROUTES.dashboard)}
+      />
+    );
+  }
+
+  if (pathname === ROUTES.settings && currentUser) {
+    return (
+      <Settings
+        theme={currentTheme}
+        currentThemeKey={themeKey}
+        themeOptions={THEME_OPTIONS}
+        onThemeChange={setThemeKey}
+        onNavigateToDashboard={() => navigateTo(ROUTES.dashboard)}
+        onNavigateToChangePassword={() => navigateTo(ROUTES.changePassword)}
+      />
+    );
+  }
+
+  if (pathname === ROUTES.changePassword && currentUser) {
+    return (
+      <ChangePassword
+        theme={currentTheme}
+        onNavigateToDashboard={() => navigateTo(ROUTES.dashboard)}
+        onSuccess={() => {
+          setAuthNotice('Password changed successfully! Please login again.');
+          session.clear();
+          setCurrentUser(null);
+          navigateTo(ROUTES.login);
+        }}
       />
     );
   }

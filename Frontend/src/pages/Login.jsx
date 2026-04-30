@@ -3,7 +3,7 @@ import AuthCard from '../components/AuthCard';
 import InputField from '../components/InputField';
 import { authApi } from '../lib/api';
 
-const Login = ({ onNavigateToSignup, onLoginSuccess, notice }) => {
+const Login = ({ onNavigateToSignup, onNavigateToForgotPassword, onLoginSuccess, notice }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -96,6 +96,36 @@ const Login = ({ onNavigateToSignup, onLoginSuccess, notice }) => {
           onChange={handleChange}
           error={errors.password}
         />
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginTop: '-8px',
+          marginBottom: '20px',
+        }}>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigateToForgotPassword?.();
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#5f564c',
+              textDecoration: 'none',
+              fontSize: '12px',
+              fontWeight: 500,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="10" rx="2" />
+              <path d="M7 11V8a5 5 0 0 1 10 0v3" />
+            </svg>
+            Forgot Password?
+          </a>
+        </div>
 
         <button
           type="submit"
