@@ -9,7 +9,7 @@ import Settings from './pages/Settings';
 import ChangePassword from './components/ChangePassword';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
-import { profileApi, session } from './lib/api';
+import { FORGOT_PASSWORD_EMAIL_KEY, profileApi, session } from './lib/api';
 import {
   getCurrentPath,
   navigateToPath,
@@ -77,6 +77,14 @@ const App = () => {
   });
   const [currentUser, setCurrentUser] = useState(null);
   const [authNotice, setAuthNotice] = useState('');
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState(() => {
+    try {
+      return sessionStorage.getItem(FORGOT_PASSWORD_EMAIL_KEY) || '';
+    } catch (error) {
+      console.error(error);
+      return '';
+    }
+  });
   const [themeKey, setThemeKey] = useState(() => localStorage.getItem(UI_THEME_KEY) || 'sand');
   const currentTheme = THEME_OPTIONS[themeKey] || THEME_OPTIONS.sand;
 
@@ -124,6 +132,15 @@ const App = () => {
 
     sessionStorage.removeItem(PENDING_SIGNUP_KEY);
   }, [pendingSignup]);
+
+  useEffect(() => {
+    if (forgotPasswordEmail) {
+      sessionStorage.setItem(FORGOT_PASSWORD_EMAIL_KEY, forgotPasswordEmail);
+      return;
+    }
+
+    sessionStorage.removeItem(FORGOT_PASSWORD_EMAIL_KEY);
+  }, [forgotPasswordEmail]);
 
   useEffect(() => {
     localStorage.setItem(UI_THEME_KEY, themeKey);
@@ -203,6 +220,7 @@ const App = () => {
     session.clear();
     setCurrentUser(null);
     setPendingSignup(null);
+    setForgotPasswordEmail('');
     setAuthNotice('you are logged out');
     navigateTo(ROUTES.login, { replace: true });
   };
@@ -275,6 +293,10 @@ const App = () => {
   if (pathname === ROUTES.forgotPassword) {
     return (
       <ForgotPassword
+        onOtpSent={(email) => {
+          setForgotPasswordEmail(email);
+          navigateTo(ROUTES.resetPassword);
+        }}
         onNavigateToLogin={() => navigateTo(ROUTES.login)}
       />
     );
@@ -283,7 +305,15 @@ const App = () => {
   if (pathname === ROUTES.resetPassword) {
     return (
       <ResetPassword
-        onNavigateToLogin={() => navigateTo(ROUTES.login)}
+        email={forgotPasswordEmail}
+        onNavigateToForgotPassword={() => {
+          setForgotPasswordEmail('');
+          navigateTo(ROUTES.forgotPassword);
+        }}
+        onNavigateToLogin={() => {
+          setForgotPasswordEmail('');
+          navigateTo(ROUTES.login);
+        }}
       />
     );
   }

@@ -1,9 +1,8 @@
-// pages/ResetPassword.jsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { profileApi } from '../lib/api';
 
-const ResetPassword = ({ onNavigateToLogin }) => {
-  const [token, setToken] = useState('');
+const ResetPassword = ({ email, onNavigateToForgotPassword, onNavigateToLogin }) => {
+  const [otp, setOtp] = useState('');
   const [formData, setFormData] = useState({
     newPassword: '',
     confirmPassword: '',
@@ -13,20 +12,10 @@ const ResetPassword = ({ onNavigateToLogin }) => {
   const [message, setMessage] = useState({ text: '', type: '' });
   const [isSuccess, setIsSuccess] = useState(false);
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenParam = urlParams.get('token');
-    if (tokenParam) {
-      setToken(tokenParam);
-    } else {
-      setMessage({ text: 'Invalid reset link. No token provided.', type: 'error' });
-    }
-  }, []);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
     setMessage({ text: '', type: '' });
   };
 
@@ -47,9 +36,14 @@ const ResetPassword = ({ onNavigateToLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!token) {
-      setMessage({ text: 'Invalid reset link. Token missing.', type: 'error' });
+
+    if (!email) {
+      setMessage({ text: 'Please request a new OTP first.', type: 'error' });
+      return;
+    }
+
+    if (!otp.trim()) {
+      setMessage({ text: 'OTP is required.', type: 'error' });
       return;
     }
 
@@ -61,18 +55,18 @@ const ResetPassword = ({ onNavigateToLogin }) => {
 
     setLoading(true);
     try {
-      await profileApi.resetPassword(token, formData.newPassword);
+      await profileApi.resetPassword(email, otp.trim(), formData.newPassword);
       setIsSuccess(true);
       setMessage({ text: 'Password reset successfully!', type: 'success' });
-      
+
       setTimeout(() => {
         onNavigateToLogin?.();
       }, 2000);
     } catch (err) {
       console.error(err);
-      setMessage({ 
-        text: err.response?.data?.message || 'Failed to reset password. Link may be expired.', 
-        type: 'error' 
+      setMessage({
+        text: err.response?.data?.message || 'Failed to reset password. OTP may be invalid or expired.',
+        type: 'error',
       });
     } finally {
       setLoading(false);
@@ -97,7 +91,6 @@ const ResetPassword = ({ onNavigateToLogin }) => {
         padding: '40px 32px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
       }}>
-        {/* Title */}
         <h1 style={{
           fontFamily: "'Playfair Display', serif",
           fontSize: '24px',
@@ -112,12 +105,11 @@ const ResetPassword = ({ onNavigateToLogin }) => {
           color: '#aaa',
           marginBottom: '32px',
         }}>
-          {isSuccess 
-            ? 'Your password has been changed successfully.' 
-            : 'Enter your new password below.'}
+          {isSuccess
+            ? 'Your password has been changed successfully.'
+            : `Enter the OTP sent to ${email || 'your email'} and set a new password.`}
         </p>
 
-        {/* Message */}
         {message.text && (
           <div style={{
             padding: '12px',
@@ -132,8 +124,40 @@ const ResetPassword = ({ onNavigateToLogin }) => {
           </div>
         )}
 
-        {!isSuccess && token && (
+        {!isSuccess && email && (
           <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '11px',
+                fontWeight: 500,
+                color: '#aaa',
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
+                marginBottom: '6px',
+              }}>
+                OTP
+              </label>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => {
+                  setOtp(e.target.value);
+                  setMessage({ text: '', type: '' });
+                }}
+                placeholder="Enter 6-digit OTP"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #e8e6e1',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: "'DM Sans', sans-serif",
+                  outline: 'none',
+                }}
+              />
+            </div>
+
             <div style={{ marginBottom: '20px' }}>
               <label style={{
                 display: 'block',
@@ -244,9 +268,9 @@ const ResetPassword = ({ onNavigateToLogin }) => {
           </button>
         )}
 
-        {!token && !isSuccess && (
+        {!email && !isSuccess && (
           <button
-            onClick={onNavigateToLogin}
+            onClick={onNavigateToForgotPassword}
             style={{
               width: '100%',
               background: '#111',
@@ -259,7 +283,7 @@ const ResetPassword = ({ onNavigateToLogin }) => {
               fontWeight: 500,
             }}
           >
-            Back to Login
+            Back to Forgot Password
           </button>
         )}
       </div>

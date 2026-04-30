@@ -1,12 +1,10 @@
-// pages/ForgotPassword.jsx
 import { useState } from 'react';
 import { profileApi } from '../lib/api';
 
-const ForgotPassword = ({ onNavigateToLogin }) => {
+const ForgotPassword = ({ onNavigateToLogin, onOtpSent }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,17 +21,19 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
     setMessage({ text: '', type: '' });
 
     try {
-      await profileApi.forgotPassword(email);
-      setEmailSent(true);
-      setMessage({ 
-        text: 'Password reset link sent to your email!', 
-        type: 'success' 
+      await profileApi.forgotPassword(email.trim());
+      setMessage({
+        text: 'Password reset OTP sent to your email!',
+        type: 'success',
       });
+      window.setTimeout(() => {
+        onOtpSent?.(email.trim());
+      }, 400);
     } catch (err) {
       console.error(err);
-      setMessage({ 
-        text: err.response?.data?.message || 'Failed to send reset link', 
-        type: 'error' 
+      setMessage({
+        text: err.response?.data?.message || 'Failed to send reset OTP',
+        type: 'error',
       });
     } finally {
       setLoading(false);
@@ -58,7 +58,6 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
         padding: '40px 32px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
       }}>
-        {/* Back Button */}
         <button
           onClick={onNavigateToLogin}
           style={{
@@ -79,7 +78,6 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
           Back to Login
         </button>
 
-        {/* Title */}
         <h1 style={{
           fontFamily: "'Playfair Display', serif",
           fontSize: '28px',
@@ -94,10 +92,9 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
           color: '#aaa',
           marginBottom: '32px',
         }}>
-          Enter your email and we'll send you a link to reset your password.
+          Enter your email and we&apos;ll send you an OTP to reset your password.
         </p>
 
-        {/* Message */}
         {message.text && (
           <div style={{
             padding: '12px',
@@ -112,59 +109,39 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
           </div>
         )}
 
-        {!emailSent ? (
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '28px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '11px',
-                fontWeight: 500,
-                color: '#aaa',
-                textTransform: 'uppercase',
-                letterSpacing: '0.8px',
-                marginBottom: '6px',
-              }}>
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #e8e6e1',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontFamily: "'DM Sans', sans-serif",
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '28px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              fontWeight: 500,
+              color: '#aaa',
+              textTransform: 'uppercase',
+              letterSpacing: '0.8px',
+              marginBottom: '6px',
+            }}>
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               style={{
                 width: '100%',
-                background: '#111',
-                color: '#fff',
-                padding: '14px',
-                border: 'none',
+                padding: '12px',
+                border: '1px solid #e8e6e1',
                 borderRadius: '8px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.6 : 1,
                 fontSize: '14px',
-                fontWeight: 500,
+                fontFamily: "'DM Sans', sans-serif",
+                outline: 'none',
               }}
-            >
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </button>
-          </form>
-        ) : (
+            />
+          </div>
+
           <button
-            onClick={onNavigateToLogin}
+            type="submit"
+            disabled={loading}
             style={{
               width: '100%',
               background: '#111',
@@ -172,14 +149,15 @@ const ForgotPassword = ({ onNavigateToLogin }) => {
               padding: '14px',
               border: 'none',
               borderRadius: '8px',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
               fontSize: '14px',
               fontWeight: 500,
             }}
           >
-            Back to Login
+            {loading ? 'Sending...' : 'Send OTP'}
           </button>
-        )}
+        </form>
       </div>
     </div>
   );

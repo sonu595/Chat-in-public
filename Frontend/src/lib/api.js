@@ -7,6 +7,8 @@ export const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
+export const FORGOT_PASSWORD_EMAIL_KEY = 'forgotPasswordEmail';
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY);
 
@@ -57,8 +59,10 @@ export const profileApi = {
       const { data } = await api.post(`/profile/forgot-password?email=${encodeURIComponent(email)}`);
     return data;
   },
-  resetPassword: async (token, newPassword) => {
-    const { data } = await api.post(`/profile/reset-password?token=${encodeURIComponent(token)}&newPassword=${encodeURIComponent(newPassword)}`);
+  resetPassword: async (email, otp, newPassword) => {
+    const { data } = await api.post(
+      `/profile/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}&newPassword=${encodeURIComponent(newPassword)}`
+    );
     return data;
   },
 };
