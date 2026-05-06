@@ -2,6 +2,9 @@ import { useState, useCallback, useRef } from 'react';
 import { chatApi, profileApi } from '../lib/api';
 import useWebSocket from './useWebSocket';
 
+const sortMessages = (items) =>
+  [...items].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
 const useChat = ({ currentUser }) => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -9,22 +12,17 @@ const useChat = ({ currentUser }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-
-  // Yeh ref WebSocket callback ke liye hai — stale closure fix
   const selectedUserRef = useRef(null);
 
-  // Jab bhi selectedUser change ho, ref bhi update karo
   const selectUser = useCallback(async (user) => {
     setSelectedUser(user);
     selectedUserRef.current = user;
     setMessages([]);
     setLoading(true);
+
     try {
       const conversation = await chatApi.getConversation(user.email);
-      const sorted = [...conversation].sort(
-        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-      );
-      setMessages(sorted);
+      setMessages(sortMessages(conversation));
     } catch (err) {
       console.error('Failed to fetch conversation:', err);
     } finally {
@@ -48,7 +46,6 @@ const useChat = ({ currentUser }) => {
     }
   }, []);
 
-  // WebSocket se incoming message
   const handleMessageReceived = useCallback((msg) => {
     setMessages((prev) => {
       const exists = prev.some(
@@ -56,14 +53,18 @@ const useChat = ({ currentUser }) => {
           item.id === msg.id ||
           (item.timestamp === msg.timestamp &&
             item.senderEmail === msg.senderEmail &&
+            item.receiverEmail === msg.receiverEmail &&
             item.content === msg.content)
       );
-      if (exists) return prev;
-      return [...prev, msg];
+
+      if (exists) {
+        return prev;
+      }
+
+      return sortMessages([...prev, msg]);
     });
   }, []);
 
-  // User list mein last message update
   const handleUserLastMessageUpdate = useCallback((msg) => {
     setUsers((prev) =>
       prev.map((u) =>
@@ -74,7 +75,8 @@ const useChat = ({ currentUser }) => {
     );
   }, []);
 
-  const { isConnected, sendViaWebSocket } = useWebSocket({
+  const { isConnected } = useWebSocket({
+    currentUserEmail: currentUser?.email,
     selectedUserRef,
     onMessageReceived: handleMessageReceived,
     onUserLastMessageUpdate: handleUserLastMessageUpdate,
@@ -83,58 +85,59 @@ const useChat = ({ currentUser }) => {
   const sendMessage = useCallback(
     async (e) => {
       e.preventDefault();
-      if (!newMessage.trim() || !selectedUser || sending) return;
+
+      if (!newMessage.trim() || !selectedUser || sending) {
+        return;
+      }
 
       const content = newMessage.trim();
       const tempId = `temp-${Date.now()}`;
+      const optimisticTimestamp = new Date().toISOString();
+
       setNewMessage('');
       setSending(true);
-
-      // Optimistic message — turant screen pe dikhao
-      const tempMsg = {
-        id: tempId,
-        senderEmail: currentUser.email,
-        receiverEmail: selectedUser.email,
-        content,
-        timestamp: new Date().toISOString(),
-        type: 'CHAT',
-        isTemp: true,
-      };
-      setMessages((prev) => [...prev, tempMsg]);
-
-      try {
-        const response = await chatApi.sendMessage({
-          receiverEmail: selectedUser.email,
-          content,
-        });
-
-        // Temp message hatao, real message lagao
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
-        if (response?.data) {
-          setMessages((prev) => [...prev, response.data]);
-        } else {
-          // Fallback: dobara fetch karo
-          const conversation = await chatApi.getConversation(selectedUser.email);
-          const sorted = [...conversation].sort(
-            (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-          );
-          setMessages(sorted);
-        }
-
-        // Receiver ko WebSocket se bhi bhejo
-        sendViaWebSocket({
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: tempId,
           senderEmail: currentUser.email,
           receiverEmail: selectedUser.email,
           content,
+          timestamp: optimisticTimestamp,
           type: 'CHAT',
-          timestamp: new Date().toISOString(),
+          isTemp: true,
+        },
+      ]);
+
+      try {
+        const savedMessage = await chatApi.sendMessage({
+          receiverEmail: selectedUser.email,
+          content,
         });
 
-        // User list mein last message update karo
+        setMessages((prev) => {
+          const withoutTemp = prev.filter((m) => m.id !== tempId);
+
+          if (!savedMessage) {
+            return withoutTemp;
+          }
+
+          const exists = withoutTemp.some((m) => m.id === savedMessage.id);
+          if (exists) {
+            return withoutTemp;
+          }
+
+          return sortMessages([...withoutTemp, savedMessage]);
+        });
+
         setUsers((prev) =>
           prev.map((u) =>
             u.email === selectedUser.email
-              ? { ...u, lastMessage: content, lastMessageTime: new Date().toISOString() }
+              ? {
+                  ...u,
+                  lastMessage: content,
+                  lastMessageTime: savedMessage?.timestamp ?? optimisticTimestamp,
+                }
               : u
           )
         );
@@ -149,7 +152,7 @@ const useChat = ({ currentUser }) => {
         setSending(false);
       }
     },
-    [newMessage, selectedUser, sending, currentUser, sendViaWebSocket]
+    [newMessage, selectedUser, sending, currentUser]
   );
 
   return {

@@ -3,39 +3,45 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { session } from '../lib/api';
 
-const useWebSocket = ({ selectedUserRef, onMessageReceived, onUserLastMessageUpdate }) => {
+const buildInboxDestination = (email) => `/topic/messages/${email}`;
+
+const useWebSocket = ({
+  currentUserEmail,
+  selectedUserRef,
+  onMessageReceived,
+  onUserLastMessageUpdate,
+}) => {
   const stompClientRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Callbacks ko bhi ref mein rakho — stale closure se bachao
   const onMessageReceivedRef = useRef(onMessageReceived);
   const onUserLastMessageUpdateRef = useRef(onUserLastMessageUpdate);
-  useEffect(() => { onMessageReceivedRef.current = onMessageReceived; }, [onMessageReceived]);
-  useEffect(() => { onUserLastMessageUpdateRef.current = onUserLastMessageUpdate; }, [onUserLastMessageUpdate]);
+
+  useEffect(() => {
+    onMessageReceivedRef.current = onMessageReceived;
+  }, [onMessageReceived]);
+
+  useEffect(() => {
+    onUserLastMessageUpdateRef.current = onUserLastMessageUpdate;
+  }, [onUserLastMessageUpdate]);
 
   const connect = useCallback(() => {
     const token = session.getToken();
-
     const client = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
-      connectHeaders: { Authorization: `Bearer ${token}` },
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
-
       onConnect: () => {
         setIsConnected(true);
-        console.log('WebSocket connected ✓');
+        console.log('WebSocket connected');
 
-        client.subscribe('/user/queue/messages', (frame) => {
+        client.subscribe(buildInboxDestination(currentUserEmail), (frame) => {
           try {
             const msg = JSON.parse(frame.body);
-            console.log('Message received via WS:', msg);
-
-            // Har incoming message ke liye user list update karo
             onUserLastMessageUpdateRef.current(msg);
 
-            // Sirf tab chat mein dikhao jab selected user wahi ho jisne bheja
             if (
               selectedUserRef.current &&
               msg.senderEmail === selectedUserRef.current.email
@@ -47,7 +53,6 @@ const useWebSocket = ({ selectedUserRef, onMessageReceived, onUserLastMessageUpd
           }
         });
       },
-
       onStompError: (frame) => {
         console.error('STOMP error:', frame);
         setIsConnected(false);
@@ -64,27 +69,23 @@ const useWebSocket = ({ selectedUserRef, onMessageReceived, onUserLastMessageUpd
 
     client.activate();
     stompClientRef.current = client;
-  }, []); // sirf mount pe — refs ke through latest values milti hain
-
-  const sendViaWebSocket = useCallback((payload) => {
-    if (stompClientRef.current?.connected) {
-      stompClientRef.current.publish({
-        destination: '/app/chat.private',
-        body: JSON.stringify(payload),
-      });
-      return true;
-    }
-    return false;
-  }, []);
+  }, [currentUserEmail, selectedUserRef]);
 
   useEffect(() => {
+    if (!currentUserEmail) {
+      return undefined;
+    }
+
     connect();
+
     return () => {
       stompClientRef.current?.deactivate();
+      stompClientRef.current = null;
+      setIsConnected(false);
     };
-  }, [connect]);
+  }, [connect, currentUserEmail]);
 
-  return { isConnected, sendViaWebSocket };
+  return { isConnected };
 };
 
 export default useWebSocket;
