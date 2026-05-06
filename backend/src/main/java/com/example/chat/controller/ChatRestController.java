@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,13 +23,16 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/chat")
 public class ChatRestController {
-    
+
     @Autowired
     private ChatService chatService;
 
     @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
     private UserProfileService userProfileService;
-    
+
     @GetMapping("/messages/{roomId}")
     public ResponseEntity<List<ChatMessage>> getMessages1(
             @PathVariable String roomId,
@@ -36,7 +40,7 @@ public class ChatRestController {
             @RequestParam(defaultValue = "50") int size) {
         return ResponseEntity.ok(chatService.getMessages(roomId, page, size));
     }
-    
+
     @GetMapping("/conversation")
     public ResponseEntity<List<ChatMessage>> getConversation1(
             @RequestParam String user1,
@@ -61,6 +65,13 @@ public class ChatRestController {
             request.getReceiverEmail(),
             request.getContent()
         );
+
+        messagingTemplate.convertAndSend(buildInboxDestination(message.getReceiverEmail()), message);
+
         return ResponseEntity.ok(message);
+    }
+
+    private String buildInboxDestination(String email) {
+        return "/topic/messages/" + email;
     }
 }
