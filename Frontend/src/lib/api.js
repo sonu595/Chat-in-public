@@ -1,14 +1,20 @@
 import axios from 'axios';
 
-const DEFAULT_API_BASE_URL = 'http://localhost:8080';
 const TOKEN_KEY = 'token';
 const trimTrailingSlash = (value) => value?.replace(/\/+$/, '');
+const getRequiredEnv = (key) => {
+  const value = trimTrailingSlash(import.meta.env[key]);
 
-export const API_BASE_URL =
-  trimTrailingSlash(import.meta.env.VITE_API_BASE_URL) || DEFAULT_API_BASE_URL;
+  if (!value) {
+    throw new Error(`${key} is required. Set it in your Vercel or local env configuration.`);
+  }
 
-export const SOCKET_BASE_URL =
-  trimTrailingSlash(import.meta.env.VITE_SOCKET_BASE_URL) || API_BASE_URL;
+  return value;
+};
+
+export const API_BASE_URL = getRequiredEnv('VITE_API_BASE_URL');
+
+export const SOCKET_BASE_URL = getRequiredEnv('VITE_SOCKET_BASE_URL');
 
 export const SOCKET_ENDPOINT_URL = `${SOCKET_BASE_URL}/ws`;
 
