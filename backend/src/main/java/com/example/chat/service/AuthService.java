@@ -3,9 +3,12 @@ package com.example.chat.service;
 import java.time.Duration;
 import java.util.Random;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.MailException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +18,7 @@ import com.example.chat.repository.UserRepository;
 
 @Service
 public class AuthService {
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final String OTP_PREFIX = "otp:";
     private static final String VERIFIED_PREFIX = "verified:";
     private static final int OTP_EXPIRY_MINUTES = 5;
@@ -38,8 +42,13 @@ public class AuthService {
     public String sendOtp(String email) {
         // Rate limiting check
         String rateLimitKey = "ratelimit:" + email;
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(rateLimitKey))) {
-            throw new BusinessException("Please wait 60 seconds before requesting another OTP");
+        try {
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(rateLimitKey))) {
+                throw new BusinessException("Please wait 60 seconds before requesting another OTP");
+            }
+        } catch (RedisConnectionFailureException ex) {
+            log.error("Redis unavailable during OTP rate-limit check", ex);
+            throw new BusinessException("OTP service is temporarily unavailable. Please try again shortly.");
         }
         
         // Check if email already registered
@@ -50,16 +59,27 @@ public class AuthService {
         String otp = String.format("%06d", new Random().nextInt(999999));
         
         // Store OTP in Redis
-        redisTemplate.opsForValue().set(OTP_PREFIX + email, otp, Duration.ofMinutes(OTP_EXPIRY_MINUTES));
-        
-        // Set rate limit
-        redisTemplate.opsForValue().set(rateLimitKey, "1", Duration.ofSeconds(RATE_LIMIT_SECONDS));
+        try {
+            // Store OTP in Redis
+            redisTemplate.opsForValue().set(OTP_PREFIX + email, otp, Duration.ofMinutes(OTP_EXPIRY_MINUTES));
+            
+            // Set rate limit
+            redisTemplate.opsForValue().set(rateLimitKey, "1", Duration.ofSeconds(RATE_LIMIT_SECONDS));
+        } catch (RedisConnectionFailureException ex) {
+            log.error("Redis unavailable while storing OTP", ex);
+            throw new BusinessException("OTP service is temporarily unavailable. Please try again shortly.");
+        }
 
         try {
             emailService.sendOtp(email, otp);
         } catch (MailException ex) {
-            redisTemplate.delete(OTP_PREFIX + email);
-            redisTemplate.delete(rateLimitKey);
+            log.error("Failed to send OTP email", ex);
+            try {
+                redisTemplate.delete(OTP_PREFIX + email);
+                redisTemplate.delete(rateLimitKey);
+            } catch (RedisConnectionFailureException cleanupEx) {
+                log.warn("Failed to clean OTP keys after mail failure", cleanupEx);
+            }
             throw new BusinessException("Failed to send OTP email. Please check the mail configuration.");
         }
 
