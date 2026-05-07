@@ -21,7 +21,7 @@ public class MessageCleanupService {
     @Value("${chat.message.retention-days:3}")
     private int retentionDays;
     
-    @Scheduled(cron = "0 0 2 * * ?") // Runs daily at 2 AM
+    @Scheduled(cron = "0 0 2 * * ?")
     @Transactional
     public void cleanupOldMessages() {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(retentionDays);
