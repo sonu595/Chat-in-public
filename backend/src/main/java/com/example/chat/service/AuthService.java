@@ -2,8 +2,10 @@ package com.example.chat.service;
 
 import java.time.Duration;
 import java.util.Random;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -52,8 +54,15 @@ public class AuthService {
         
         // Set rate limit
         redisTemplate.opsForValue().set(rateLimitKey, "1", Duration.ofSeconds(RATE_LIMIT_SECONDS));
-        
-        emailService.sendOtp(email, otp);
+
+        try {
+            emailService.sendOtp(email, otp);
+        } catch (MailException ex) {
+            redisTemplate.delete(OTP_PREFIX + email);
+            redisTemplate.delete(rateLimitKey);
+            throw new BusinessException("Failed to send OTP email. Please check the mail configuration.");
+        }
+
         return "OTP sent successfully. Valid for 5 minutes.";
     }
 
