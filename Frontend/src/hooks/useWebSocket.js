@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { session } from '../lib/api';
+import { session, SOCKET_ENDPOINT_URL } from '../lib/api';
 
 const buildInboxDestination = (email) => `/topic/messages/${email}`;
 
@@ -28,7 +28,7 @@ const useWebSocket = ({
   const connect = useCallback(() => {
     const token = session.getToken();
     const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      webSocketFactory: () => new SockJS(SOCKET_ENDPOINT_URL),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,

@@ -28,6 +28,8 @@ export const PUBLIC_ROUTES = new Set([
   ROUTES.resetPassword,
 ]);
 
+export const KNOWN_ROUTES = new Set(Object.values(ROUTES));
+
 export const PENDING_SIGNUP_KEY = 'pendingSignup';
 
 export const getCurrentPath = () => window.location.pathname || '/';

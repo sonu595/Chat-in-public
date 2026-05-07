@@ -12,6 +12,7 @@ import ResetPassword from './components/ResetPassword';
 import { FORGOT_PASSWORD_EMAIL_KEY, profileApi, session } from './lib/api';
 import {
   getCurrentPath,
+  KNOWN_ROUTES,
   navigateToPath,
   PENDING_SIGNUP_KEY,
   PUBLIC_ROUTES,
@@ -174,13 +175,16 @@ const App = () => {
 
     let nextPath = null;
     let nextNotice = '';
+    const isKnownPath = pathname === '/' || KNOWN_ROUTES.has(pathname);
 
     if (currentUser) {
       // Agar user logged in hai aur public route pe hai to dashboard pe bhejo
       if (PUBLIC_ROUTES.has(pathname) || pathname === ROUTES.dashboard) {
         nextPath = ROUTES.dashboard;
+      } else if (!isKnownPath) {
+        nextPath = ROUTES.dashboard;
       }
-    } else if (pathname === '/' || pathname === ROUTES.dashboard) {
+    } else if (pathname === '/' || pathname === ROUTES.dashboard || !isKnownPath) {
       if (pathname === ROUTES.dashboard) {
         nextNotice = 'login first';
       }

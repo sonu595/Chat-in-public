@@ -1,7 +1,16 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080';
+const DEFAULT_API_BASE_URL = 'http://localhost:8080';
 const TOKEN_KEY = 'token';
+const trimTrailingSlash = (value) => value?.replace(/\/+$/, '');
+
+export const API_BASE_URL =
+  trimTrailingSlash(import.meta.env.VITE_API_BASE_URL) || DEFAULT_API_BASE_URL;
+
+export const SOCKET_BASE_URL =
+  trimTrailingSlash(import.meta.env.VITE_SOCKET_BASE_URL) || API_BASE_URL;
+
+export const SOCKET_ENDPOINT_URL = `${SOCKET_BASE_URL}/ws`;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
